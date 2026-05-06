@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:news_app/core/app_colors.dart';
 import 'package:news_app/models/article.dart';
 import 'package:news_app/services/news_service.dart';
+import 'package:news_app/widgets/article_card.dart';
 
 class NewsScreen extends StatefulWidget {
   @override
@@ -9,135 +11,114 @@ class NewsScreen extends StatefulWidget {
 
 class _NewsScreenState extends State<NewsScreen> {
   late NewsService newsService;
-  List<Article> articles = [];
-  bool isLoading = true;
-  String errorMessage = '';
+  String selectedCategory = 'Top News';
+
+  final List<String> categories = [
+    'Top News',
+    'Sports',
+    'Business',
+    'Technology',
+    'Entertainment',
+  ];
 
   @override
   void initState() {
     super.initState();
     newsService = NewsService();
-    // TEP 1: Trigger the API call
-    fetchArticles();
   }
 
-  Future<void> fetchArticles() async {
-    try {
-      List<Article> result = await newsService.fetchTopHeadlines(country: 'us');
-      setState(() {
-        articles = result;
-        isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        errorMessage = 'Error: $e';
-        isLoading = false;
-      });
+  Future<List<Article>> fetchArticles(String category) async {
+    if (category == 'Top News') {
+      return await newsService.fetchTopHeadlines(country: 'us');
+    } else {
+      return await newsService.fetchArticlesByCategory(
+        category: category.toLowerCase(),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Top Headlines'),
-        backgroundColor: Colors.blue,
-      ),
-      body: isLoading
-          ? Center(child: CircularProgressIndicator())
-          : errorMessage.isNotEmpty
-          ? Center(child: Text(errorMessage))
-          : articles.isEmpty
-          ? Center(child: Text('No articles found'))
-          : ListView.builder(
-              itemCount: articles.length,
-              itemBuilder: (context, index) {
-                Article article = articles[index];
-
-                return Card(
-                  margin: EdgeInsets.all(10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Article Image
-                      if (article.urlToImage.isNotEmpty)
-                        Image.network(
-                          article.urlToImage,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              height: 200,
-                              color: Colors.grey[300],
-                              child: Icon(Icons.image_not_supported),
-                            );
-                          },
-                        ),
-
-                      // Article Content
-                      Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Title
-                            Text(
-                              article.title,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-
-                            SizedBox(height: 8),
-
-                            // Description
-                            Text(
-                              article.description,
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 14,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-
-                            SizedBox(height: 12),
-
-                            // Author and Date
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'By ${article.author}',
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 12,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                Text(
-                                  article.publishedAt.split('T')[0],
-                                  style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
+    return DefaultTabController(
+      length: categories.length,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Easy News', style: TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primaryColor,
+          elevation: 0,
+        ),
+        body: Column(
+          children: [
+            // Tab Bar
+            Container(
+              color: AppColors.primaryColor,
+              child: TabBar(
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                indicatorColor: Colors.white,
+                indicatorWeight: 3,
+                labelColor: Colors.blue[900],
+                unselectedLabelColor: Colors.white70,
+                labelStyle: TextStyle(fontWeight: FontWeight.w600),
+                tabs: [
+                  Tab(text: 'Top News'),
+                  Tab(text: 'Sports'),
+                  Tab(text: 'Business'),
+                  Tab(text: 'Technology'),
+                  Tab(text: 'Entertainment'),
+                ],
+                onTap: (index) {
+                  setState(() {
+                    selectedCategory = categories[index];
+                  });
+                },
+              ),
             ),
+            // Content with FutureBuilder
+            Expanded(
+              child: FutureBuilder<List<Article>>(
+                future: fetchArticles(selectedCategory),
+                builder: (context, snapshot) {
+                  // Loading state (waiting)
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(
+                        color: AppColors.primaryColor,
+                      ),
+                    );
+                  }
+                  
+                  // Error state
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Error: ${snapshot.error}'),
+                    );
+                  }
+                  
+                  // Data state (done)
+                  if (snapshot.hasData) {
+                    final articles = snapshot.data ?? [];
+                    
+                    if (articles.isEmpty) {
+                      return Center(child: Text('No articles found'));
+                    }
+                    
+                    return ListView.builder(
+                      itemCount: articles.length,
+                      itemBuilder: (context, index) {
+                        return ArticleCardWidget(article: articles[index]);
+                      },
+                    );
+                  }
+                  
+                  // Default state
+                  return Center(child: Text('No data'));
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

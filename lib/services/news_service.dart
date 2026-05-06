@@ -5,7 +5,7 @@ import 'package:news_app/models/article.dart';
 class NewsService {
   late Dio dio;
   static const String baseUrl = 'https://newsapi.org/v2';
-  static  String apiKey = dotenv.env['apiKey']!;
+  static String apiKey = dotenv.env['apiKey']!;
 
   NewsService() {
     dio = Dio(BaseOptions(baseUrl: baseUrl));
@@ -40,4 +40,31 @@ class NewsService {
       return [];
     }
   }
+
+  /// get articles by category
+  Future<List<Article>> fetchArticlesByCategory({ required String category, }) async {
+    try {
+      final response = await dio.get(
+        '/top-headlines',
+        queryParameters: {
+          'category': category, // e.g., 'business', 'sports', 'technology'
+          'apiKey': apiKey,
+        },
+      );
+      if (response.statusCode == 200) {
+        List<dynamic> articlesJson = response.data['articles'];
+        List<Article> articles = [];
+        for (var json in articlesJson) {
+          articles.add(Article.fromJson(json));
+        }
+        return articles;
+      } else {
+        throw Exception('Failed to load articles: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      print('Error: ${e.message}');
+      return [];
+    }
+  }
 }
+
