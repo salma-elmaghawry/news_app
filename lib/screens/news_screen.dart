@@ -79,30 +79,61 @@ class _NewsScreenState extends State<NewsScreen> {
               child: FutureBuilder<List<Article>>(
                 future: fetchArticles(selectedCategory),
                 builder: (context, snapshot) {
-                  // Loading state (waiting)
+                  // State 1: WAITING → Show loading indicator
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primaryColor,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: AppColors.primaryColor,
+                          ),
+                          SizedBox(height: 16),
+                          Text('Loading articles...'),
+                        ],
                       ),
                     );
                   }
-                  
-                  // Error state
+
+                  // State 2: ERROR → Display error message
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text('Error: ${snapshot.error}'),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 50,
+                            color: Colors.red,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Error: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ],
+                      ),
                     );
                   }
-                  
-                  // Data state (done)
+
+                  // State 3: DONE → Data successfully loaded
                   if (snapshot.hasData) {
                     final articles = snapshot.data ?? [];
-                    
+
                     if (articles.isEmpty) {
-                      return Center(child: Text('No articles found'));
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.newspaper, size: 50, color: Colors.grey),
+                            SizedBox(height: 16),
+                            Text('No articles found'),
+                          ],
+                        ),
+                      );
                     }
-                    
+
                     return ListView.builder(
                       itemCount: articles.length,
                       itemBuilder: (context, index) {
@@ -110,9 +141,8 @@ class _NewsScreenState extends State<NewsScreen> {
                       },
                     );
                   }
-                  
-                  // Default state
-                  return Center(child: Text('No data'));
+                  // Default fallback state
+                  return Center(child: Text('No data available'));
                 },
               ),
             ),
