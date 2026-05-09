@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:news_app/core/app_colors.dart';
 import 'package:news_app/models/article.dart';
 
 class ArticleCardWidget extends StatelessWidget {
@@ -19,21 +21,28 @@ class ArticleCardWidget extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
             child: article.urlToImage.isNotEmpty
-                ? Image.network(
-                    article.urlToImage,
+                ? CachedNetworkImage(
+                    imageUrl: article.urlToImage,
                     height: 180,
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return SizedBox(
-                        height: 180,
-                        width: double.infinity,
-                        child: Image.asset(
-                          'assets/images/no_news_image.jpg',
-                          fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      height: 180,
+                      color: Colors.grey[300],
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppColors.primaryColor,
                         ),
-                      );
-                    },
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => SizedBox(
+                      height: 180,
+                      width: double.infinity,
+                      child: Image.asset(
+                        'assets/images/no_news_image.jpg',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   )
                 : SizedBox(
                     height: 180,

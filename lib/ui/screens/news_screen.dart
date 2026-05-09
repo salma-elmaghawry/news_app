@@ -14,9 +14,9 @@ class _NewsScreenState extends State<NewsScreen> {
   late ScrollController scrollController;
   String selectedCategory = 'Top News';
 
-  // ============================================================================
+  //
   // PAGINATION VARIABLES (STEP 1)
-  // ============================================================================
+
   int currentPage = 1;
   final int pageSize = 10;
   int totalResults = 0;
@@ -37,9 +37,7 @@ class _NewsScreenState extends State<NewsScreen> {
     super.initState();
     newsService = NewsService();
 
-    // ========================================================================
     // STEP 2 & 3: INITIALIZE SCROLL CONTROLLER & LOAD FIRST PAGE
-    // ========================================================================
     scrollController = ScrollController();
     scrollController.addListener(_onScroll);
 
@@ -47,9 +45,7 @@ class _NewsScreenState extends State<NewsScreen> {
     fetchFirstPage();
   }
 
-  // ============================================================================
   // STEP 4: DETECT SCROLL POSITION
-  // ============================================================================
   void _onScroll() {
     double currentScroll = scrollController.position.pixels;
     double maxScroll = scrollController.position.maxScrollExtent;
@@ -61,9 +57,7 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
-  // ============================================================================
   // STEP 5: FETCH FIRST PAGE
-  // ============================================================================
   Future<void> fetchFirstPage() async {
     print('\n📍 LOADING FIRST PAGE');
     print('=================================');
@@ -90,9 +84,7 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
-  // ============================================================================
   // STEP 6: FETCH NEXT PAGE (Triggered by scroll)
-  // ============================================================================
   Future<void> fetchNextPage() async {
     if (isLoadingMore) return;
     if (!hasMore) return;
@@ -167,9 +159,6 @@ class _NewsScreenState extends State<NewsScreen> {
         ),
         body: Column(
           children: [
-            // ====================================================================
-            // TAB BAR
-            // ====================================================================
             Container(
               color: AppColors.primaryColor,
               child: TabBar(
@@ -197,26 +186,6 @@ class _NewsScreenState extends State<NewsScreen> {
               ),
             ),
 
-            // ====================================================================
-            // STATUS PANEL (STEP 7)
-            // ====================================================================
-            Container(
-              padding: EdgeInsets.all(12),
-              color: Colors.blue[50],
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatBox('Page', currentPage.toString()),
-                  _buildStatBox('Loaded', articles.length.toString()),
-                  _buildStatBox('Total', totalResults.toString()),
-                  _buildStatBox('More?', hasMore ? 'Yes' : 'No'),
-                ],
-              ),
-            ),
-
-            // ====================================================================
-            // LIST VIEW WITH PAGINATION (STEP 8)
-            // ====================================================================
             Expanded(
               child: articles.isEmpty && !isLoadingMore
                   ? Center(
@@ -257,24 +226,6 @@ class _NewsScreenState extends State<NewsScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  /// Helper widget to display statistics (STEP 7)
-  Widget _buildStatBox(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryColor,
-          ),
-        ),
-        SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey)),
-      ],
     );
   }
 }

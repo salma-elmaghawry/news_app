@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:news_app/models/article.dart';
+import 'package:news_app/models/news_response.dart';
 
 class NewsService {
   late Dio dio;
@@ -10,61 +10,57 @@ class NewsService {
   NewsService() {
     dio = Dio(BaseOptions(baseUrl: baseUrl));
   }
-  //  Send Request & Receive Response
-  Future<List<Article>> fetchTopHeadlines({required String country}) async {
+  Future<NewsResponse> fetchTopHeadlines({
+    required String country,
+    required int page,
+    int pageSize = 10,
+  }) async {
     try {
-      // STEP 1: Send HTTP GET Request
       final response = await dio.get(
         '/top-headlines',
         queryParameters: {
-          'country': country, // e.g., 'us', 'gb', 'in'
+          'country': country,
+          'page': page,
+          'pageSize': pageSize,
           'apiKey': apiKey,
         },
       );
       if (response.statusCode == 200) {
-        //  Decode JSON (DIO does this automatically!)
-        // Get articles list from response
-        List<dynamic> articlesJson = response.data['articles'];
-        //Convert JSON to Article Model
-        List<Article> articles = [];
-        for (var json in articlesJson) {
-          articles.add(Article.fromJson(json));
-        }
-        // Return (Store) the articles
-        return articles;
+        // Convert entire response to NewsResponse model
+        return NewsResponse.fromJson(response.data);
       } else {
         throw Exception('Failed to load headlines: ${response.statusCode}');
       }
     } on DioException catch (e) {
       print('Error: ${e.message}');
-      return [];
+      rethrow;
     }
   }
 
-  /// get articles by category
-  Future<List<Article>> fetchArticlesByCategory({ required String category, }) async {
+  /// Fetch articles by category with pagination
+  Future<NewsResponse> fetchArticlesByCategory({
+    required String category,
+    required int page,
+    int pageSize = 10,
+  }) async {
     try {
       final response = await dio.get(
         '/top-headlines',
         queryParameters: {
-          'category': category, // e.g., 'business', 'sports', 'technology'
+          'category': category,
+          'page': page,
+          'pageSize': pageSize,
           'apiKey': apiKey,
         },
       );
       if (response.statusCode == 200) {
-        List<dynamic> articlesJson = response.data['articles'];
-        List<Article> articles = [];
-        for (var json in articlesJson) {
-          articles.add(Article.fromJson(json));
-        }
-        return articles;
+        return NewsResponse.fromJson(response.data);
       } else {
         throw Exception('Failed to load articles: ${response.statusCode}');
       }
     } on DioException catch (e) {
       print('Error: ${e.message}');
-      return [];
+      rethrow;
     }
   }
 }
-

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:news_app/screens/news_screen.dart';
+import 'package:news_app/ui/screens/news_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
