@@ -191,7 +191,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 });
               },
             ),
-            // FUTURE BUILDER WITH PAGINATION
+            // FUTURE BUILDER WITH PAGINATION & REFRESH
             Expanded(
               child: FutureBuilder<dynamic>(
                 future: articles.isEmpty
@@ -220,10 +220,14 @@ class _NewsScreenState extends State<NewsScreen> {
                     return Center(child: Text('No articles found'));
                   }
 
-                  return NewsListView(
-                    articles: articles,
-                    scrollController: scrollController,
-                    isLoadingNextPage: isLoadingNextPage,
+                  return RefreshIndicator(
+                    onRefresh: fetchFirstPage,
+                    color: AppColors.primaryColor,
+                    child: NewsListView(
+                      articles: articles,
+                      scrollController: scrollController,
+                      isLoadingNextPage: isLoadingNextPage,
+                    ),
                   );
                 },
               ),
