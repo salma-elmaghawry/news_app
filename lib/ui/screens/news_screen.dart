@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:news_app/core/app_colors.dart';
-import 'package:news_app/models/article.dart';
+import 'package:news_app/models/article_model.dart';
 import 'package:news_app/services/news_service.dart';
-import 'package:news_app/ui/widgets/article_card.dart';
+import 'package:news_app/ui/widgets/news_category_tab_bar.dart';
+import 'package:news_app/ui/widgets/news_list_view.dart';
+import 'package:news_app/ui/widgets/news_loading_state.dart';
 
 class NewsScreen extends StatefulWidget {
   @override
@@ -10,19 +12,12 @@ class NewsScreen extends StatefulWidget {
 }
 
 class _NewsScreenState extends State<NewsScreen> {
+  // ==================== SERVICES & CONTROLLERS ====================
   late NewsService newsService;
   late ScrollController scrollController;
+
+  // ==================== UI STATE ====================
   String selectedCategory = 'Top News';
-
-  //
-  // PAGINATION VARIABLES (STEP 1)
-
-  int currentPage = 1;
-  final int pageSize = 10;
-  int totalResults = 0;
-  List<Article> articles = [];
-  bool hasMore = true;
-  bool isLoadingMore = false;
 
   final List<String> categories = [
     'Top News',
@@ -32,98 +27,47 @@ class _NewsScreenState extends State<NewsScreen> {
     'Entertainment',
   ];
 
+  // ==================== pagination variables ====================
+  int currentPage = 1;
+  final int pageSize = 10;
+  int totalResults = 0;
+  List<Article> articles = [];
+  bool hasMore = true;
+  bool isLoadingNextPage = false;
+
+  // ==================== INITIALIZATION ====================
   @override
   void initState() {
     super.initState();
     newsService = NewsService();
-
-    // STEP 2 & 3: INITIALIZE SCROLL CONTROLLER & LOAD FIRST PAGE
     scrollController = ScrollController();
     scrollController.addListener(_onScroll);
-
-    // Load first page when screen opens
     fetchFirstPage();
   }
 
-  // STEP 4: DETECT SCROLL POSITION
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
+  // ==================== SCROLL DETECTION ====================
+  /// Detects when user scrolls 300px from bottom and loads next page
   void _onScroll() {
     double currentScroll = scrollController.position.pixels;
     double maxScroll = scrollController.position.maxScrollExtent;
 
-    // If user scrolled within 300 pixels of bottom, load next page
-    if (currentScroll >= (maxScroll - 300) && hasMore && !isLoadingMore) {
-      print('✓ User reached near bottom! Loading next page...');
+    // Trigger loading when within 300px of bottom
+    bool isNearBottom = currentScroll >= (maxScroll - 300);
+
+    if (isNearBottom && hasMore && !isLoadingNextPage) {
+      print('User scrolled near bottom - Loading next page...');
       fetchNextPage();
     }
   }
 
-  // STEP 5: FETCH FIRST PAGE
-  Future<void> fetchFirstPage() async {
-    print('\n📍 LOADING FIRST PAGE');
-    print('=================================');
-
-    setState(() {
-      articles.clear();
-      currentPage = 1;
-      isLoadingMore = false;
-    });
-
-    try {
-      final response = await _fetchArticlesResponse(selectedCategory, 1);
-      setState(() {
-        articles = response.articles;
-        totalResults = response.totalResults;
-        print('✓ Loaded ${articles.length} articles');
-        print('  Total available: $totalResults');
-      });
-    } catch (e) {
-      print('❌ Error loading first page: $e');
-      setState(() {
-        articles = [];
-      });
-    }
-  }
-
-  // STEP 6: FETCH NEXT PAGE (Triggered by scroll)
-  Future<void> fetchNextPage() async {
-    if (isLoadingMore) return;
-    if (!hasMore) return;
-
-    print('\n📍 LOADING NEXT PAGE');
-    print('=================================');
-
-    setState(() {
-      isLoadingMore = true;
-      print('⏳ Loading page ${currentPage + 1}...');
-    });
-
-    try {
-      int nextPage = currentPage + 1;
-      final response = await _fetchArticlesResponse(selectedCategory, nextPage);
-
-      setState(() {
-        articles.addAll(response.articles); // Append to list!
-        currentPage = nextPage;
-        isLoadingMore = false;
-
-        print('✓ Loaded ${response.articles.length} more articles');
-        print('  Total loaded: ${articles.length}');
-
-        // Check if we've reached the end
-        if (articles.length >= totalResults) {
-          hasMore = false;
-          print('✓ Reached end! No more pages.');
-        }
-      });
-    } catch (e) {
-      print('❌ Error loading next page: $e');
-      setState(() {
-        isLoadingMore = false;
-      });
-    }
-  }
-
-  // Helper method to fetch articles
+  // ==================== API CALLS ====================
+  /// Fetches articles from API based on selected category
   Future<dynamic> _fetchArticlesResponse(String category, int page) async {
     if (category == 'Top News') {
       return await newsService.fetchTopHeadlines(
@@ -140,12 +84,91 @@ class _NewsScreenState extends State<NewsScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    scrollController.dispose();
-    super.dispose();
+  // ==================== PAGINATION METHODS ====================
+  /// Fetches the first page of articles for the selected category
+  /// Clears previous data and resets pagination
+  Future<void> fetchFirstPage() async {
+    _resetPagination();
+
+    try {
+      final response = await _fetchArticlesResponse(selectedCategory, 1);
+      _updateArticles(response.articles, response.totalResults);
+    } catch (e) {
+      print('Error loading first page: $e');
+      setState(() {
+        articles = [];
+      });
+    }
   }
 
+  /// Fetches the next page of articles when user scrolls near bottom
+  /// Appends articles to existing list (infinite scroll)
+  Future<void> fetchNextPage() async {
+    // Guard clauses: prevent duplicate requests
+    if (isLoadingNextPage) {
+      print('Already loading next page, ignoring request');
+      return;
+    }
+    if (!hasMore) {
+      print('All articles loaded, no more pages');
+      return;
+    }
+    setState(() {
+      isLoadingNextPage = true;
+    });
+
+    try {
+      int nextPage = currentPage + 1;
+      final response = await _fetchArticlesResponse(selectedCategory, nextPage);
+
+      _appendArticles(response.articles, nextPage, response.totalResults);
+    } catch (e) {
+      print('Error loading next page: $e');
+      setState(() {
+        isLoadingNextPage = false;
+      });
+    }
+  }
+
+  // ==================== PAGINATION METHODS ====================
+  /// Resets all pagination variables to initial state
+  void _resetPagination() {
+    setState(() {
+      articles.clear();
+      currentPage = 1;
+      isLoadingNextPage = false;
+      hasMore = true;
+      totalResults = 0;
+    });
+  }
+
+  /// Updates UI with new articles and total count
+  void _updateArticles(List<Article> newArticles, int total) {
+    setState(() {
+      articles = newArticles;
+      totalResults = total;
+      print('Loaded ${articles.length} articles from API');
+    });
+  }
+
+  /// Appends new articles to list and checks if pagination complete
+  void _appendArticles(List<Article> newArticles, int nextPage, int total) {
+    setState(() {
+      articles.addAll(newArticles); // Append, don't replace!
+      currentPage = nextPage;
+      isLoadingNextPage = false;
+
+      // Check if we've loaded all available articles
+      if (articles.length >= total) {
+        hasMore = false;
+        print('Reached end! All ${articles.length} articles loaded.');
+      } else {
+        print('Loaded ${articles.length}/$total articles');
+      }
+    });
+  }
+
+  // ==================== UI BUILD ====================
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -159,69 +182,51 @@ class _NewsScreenState extends State<NewsScreen> {
         ),
         body: Column(
           children: [
-            Container(
-              color: AppColors.primaryColor,
-              child: TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicatorColor: Colors.white,
-                indicatorWeight: 3,
-                labelColor: Colors.blue[900],
-                unselectedLabelColor: Colors.white70,
-                labelStyle: TextStyle(fontWeight: FontWeight.w600),
-                tabs: [
-                  Tab(text: 'Top News'),
-                  Tab(text: 'Sports'),
-                  Tab(text: 'Business'),
-                  Tab(text: 'Technology'),
-                  Tab(text: 'Entertainment'),
-                ],
-                onTap: (index) {
-                  setState(() {
-                    selectedCategory = categories[index];
-                    // Reset pagination when category changes
-                    fetchFirstPage();
-                  });
+            NewsCategoryTabBar(
+              categories: categories,
+              onCategoryChanged: (index) {
+                setState(() {
+                  selectedCategory = categories[index];
+                  fetchFirstPage();
+                });
+              },
+            ),
+            // FUTURE BUILDER WITH PAGINATION
+            Expanded(
+              child: FutureBuilder<dynamic>(
+                future: articles.isEmpty
+                    ? _fetchArticlesResponse(selectedCategory, 1)
+                    : Future.value(null),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: NewsLoadingState());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.hasData) {
+                    final response = snapshot.data;
+                    if (response != null && articles.isEmpty) {
+                      setState(() {
+                        articles = response.articles;
+                        totalResults = response.totalResults;
+                      });
+                    }
+                  }
+
+                  if (articles.isEmpty) {
+                    return Center(child: Text('No articles found'));
+                  }
+
+                  return NewsListView(
+                    articles: articles,
+                    scrollController: scrollController,
+                    isLoadingNextPage: isLoadingNextPage,
+                  );
                 },
               ),
-            ),
-
-            Expanded(
-              child: articles.isEmpty && !isLoadingMore
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.newspaper, size: 50, color: Colors.grey),
-                          SizedBox(height: 16),
-                          Text('No articles found'),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      controller: scrollController,
-                      itemCount: articles.length + (isLoadingMore ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        // Show loading indicator at bottom
-                        if (index == articles.length) {
-                          return Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Column(
-                              children: [
-                                CircularProgressIndicator(
-                                  color: AppColors.primaryColor,
-                                ),
-                                SizedBox(height: 8),
-                                Text('Loading more articles...'),
-                              ],
-                            ),
-                          );
-                        }
-
-                        // Show article
-                        return ArticleCardWidget(article: articles[index]);
-                      },
-                    ),
             ),
           ],
         ),

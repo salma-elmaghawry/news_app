@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:news_app/core/app_colors.dart';
-import 'package:news_app/models/article.dart';
+import 'package:news_app/models/article_model.dart';
 
 class ArticleCardWidget extends StatelessWidget {
   final Article article;

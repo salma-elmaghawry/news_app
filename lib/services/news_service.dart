@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:news_app/models/news_response.dart';
+import 'package:news_app/models/news_response_model.dart';
 
 class NewsService {
   late Dio dio;
@@ -10,6 +10,7 @@ class NewsService {
   NewsService() {
     dio = Dio(BaseOptions(baseUrl: baseUrl));
   }
+  // Fetch top headlines with pagination
   Future<NewsResponse> fetchTopHeadlines({
     required String country,
     required int page,
