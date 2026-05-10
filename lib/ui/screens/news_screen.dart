@@ -120,7 +120,6 @@ class _NewsScreenState extends State<NewsScreen> {
     try {
       int nextPage = currentPage + 1;
       final response = await _fetchArticlesResponse(selectedCategory, nextPage);
-
       _appendArticles(response.articles, nextPage, response.totalResults);
     } catch (e) {
       print('Error loading next page: $e');
