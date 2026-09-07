@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:news_app/core/app_colors.dart';
+import 'package:news_app/core/news_category_enum.dart';
 import 'package:news_app/models/article_model.dart';
 import 'package:news_app/services/news_service.dart';
 import 'package:news_app/ui/widgets/news_category_tab_bar.dart';
@@ -17,15 +18,9 @@ class _NewsScreenState extends State<NewsScreen> {
   late ScrollController scrollController;
 
   // ==================== UI STATE ====================
-  String selectedCategory = 'Top News';
+  NewsCategory selectedCategory = NewsCategory.topNews;
 
-  final List<String> categories = [
-    'Top News',
-    'Sports',
-    'Business',
-    'Technology',
-    'Entertainment',
-  ];
+  final List<NewsCategory> categories = NewsCategory.values;
 
   // ==================== pagination variables ====================
   int currentPage = 1;
@@ -91,7 +86,7 @@ class _NewsScreenState extends State<NewsScreen> {
     _resetPagination();
 
     try {
-      final response = await _fetchArticlesResponse(selectedCategory, 1);
+      final response = await _fetchArticlesResponse(selectedCategory.label, 1);
       _updateArticles(response.articles, response.totalResults);
     } catch (e) {
       print('Error loading first page: $e');
@@ -119,7 +114,10 @@ class _NewsScreenState extends State<NewsScreen> {
 
     try {
       int nextPage = currentPage + 1;
-      final response = await _fetchArticlesResponse(selectedCategory, nextPage);
+      final response = await _fetchArticlesResponse(
+        selectedCategory.label,
+        nextPage,
+      );
       _appendArticles(response.articles, nextPage, response.totalResults);
     } catch (e) {
       print('Error loading next page: $e');
@@ -182,7 +180,7 @@ class _NewsScreenState extends State<NewsScreen> {
         body: Column(
           children: [
             NewsCategoryTabBar(
-              categories: categories,
+              categories: categories.map((category) => category.label).toList(),
               onCategoryChanged: (index) {
                 setState(() {
                   selectedCategory = categories[index];
@@ -194,7 +192,7 @@ class _NewsScreenState extends State<NewsScreen> {
             Expanded(
               child: FutureBuilder<dynamic>(
                 future: articles.isEmpty
-                    ? _fetchArticlesResponse(selectedCategory, 1)
+                    ? _fetchArticlesResponse(selectedCategory.label, 1)
                     : Future.value(null),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
